@@ -56,6 +56,8 @@ export function Intro({ assetsReady, onStart, onDone }: Props) {
     const T1 = reduced ? 400 : 1400;
     const T2 = reduced ? 150 : 600;
     const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+    // Começa rápido e só desacelera no fim (não zera a velocidade na troca de fase).
+    const easeOut = (t: number) => 1 - Math.pow(1 - t, 2);
     let raf = 0;
     let last = 0;
     let elapsed = 0;
@@ -76,7 +78,7 @@ export function Intro({ assetsReady, onStart, onDone }: Props) {
           finishFrom = p;
         }
       } else {
-        p = finishFrom + (1 - finishFrom) * easeInOut(Math.min((elapsed - finishAt) / T2, 1));
+        p = finishFrom + (1 - finishFrom) * easeOut(Math.min((elapsed - finishAt) / T2, 1));
       }
       progress.value = p;
 
