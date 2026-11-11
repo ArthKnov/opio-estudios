@@ -37,7 +37,10 @@ export function ParallaxImage({ source, opacity = 0.7, speed = 0.18, fade = true
       if (!m) return;
       const center = m.pageY + m.height / 2;
       const delta = center - viewportH.value / 2;
-      offset.value = Math.max(-140, Math.min(140, -delta * speed));
+      // Suaviza o alvo: measure() entrega posicoes arredondadas, e usar o valor
+      // cru fazia a imagem "pular" alguns pixels a cada quadro durante o scroll.
+      const target = Math.max(-140, Math.min(140, -delta * speed));
+      offset.value += (target - offset.value) * 0.35;
     },
   );
 
