@@ -1,98 +1,117 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Asset } from 'expo-asset';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Platform, StyleSheet, View } from 'react-native';
+import Animated, {
+  useAnimatedRef,
+  useAnimatedScrollHandler,
+  useSharedValue,
+} from 'react-native-reanimated';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { CustomCursor } from '@/components/fx/CustomCursor';
+import { Scanlines } from '@/components/fx/Scanlines';
+import { ScrollContext } from '@/components/fx/scroll-context';
+import { Intro } from '@/components/Intro';
+import { Nav } from '@/components/Nav';
+import { Contact } from '@/components/sections/Contact';
+import { Footer } from '@/components/sections/Footer';
+import { Hero } from '@/components/sections/Hero';
+import { Location } from '@/components/sections/Location';
+import { Productions } from '@/components/sections/Productions';
+import { Services } from '@/components/sections/Services';
+import { Studios } from '@/components/sections/Studios';
+import { colors, images, layout } from '@/constants/theme';
+import { useLayout } from '@/hooks/use-layout';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
+/** `?skip` na URL (web) pula a intro: util para desenvolvimento e testes. */
+const skipIntro = Platform.OS === 'web' && typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('skip');
+
+const criticalAssets = [images.logo, images.fundo03];
+const lazyAssets = [images.fundo02, images.logoTexture, images.servicos, images.producoes, images.contato, images.mapa];
+
+export default function Home() {
+  const { height } = useLayout();
+  const [assetsReady, setAssetsReady] = useState(false);
+  const [showIntro, setShowIntro] = useState(!skipIntro);
+  const [entered, setEntered] = useState(skipIntro);
+
+  const scrollY = useSharedValue(0);
+  const viewportH = useSharedValue(height);
+  const active = useSharedValue(skipIntro ? 1 : 0);
+  const scrollRef = useAnimatedRef<Animated.ScrollView>();
+  const sectionY = useRef<Record<string, number>>({});
+
+  useEffect(() => {
+    viewportH.value = height;
+  }, [height, viewportH]);
+
+  // Pre-carrega o essencial (a intro so libera o clique quando isso terminar) e o restante em segundo plano.
+  useEffect(() => {
+    let alive = true;
+    Asset.loadAsync(criticalAssets)
+      .catch(() => {})
+      .then(() => {
+        if (alive) setAssetsReady(true);
+        return Asset.loadAsync(lazyAssets).catch(() => {});
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const onScroll = useAnimatedScrollHandler((e) => {
+    scrollY.value = e.contentOffset.y;
+  });
+
+  const onSectionLayout = useCallback((id: string, y: number) => {
+    sectionY.current[id] = y;
+  }, []);
+
+  const scrollToSection = useCallback(
+    (id: string) => {
+      const y = id === 'inicio' ? 0 : Math.max(0, (sectionY.current[id] ?? 0) - layout.navHeight + 1);
+      scrollRef.current?.scrollTo({ y, animated: true });
+    },
+    [scrollRef],
   );
-}
 
-export default function HomeScreen() {
+  const ctx = useMemo(() => ({ scrollY, viewportH, active, scrollToSection }), [scrollY, viewportH, active, scrollToSection]);
+
+  const handleStart = useCallback(() => {
+    active.value = 1;
+    setEntered(true);
+  }, [active]);
+
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+    <ScrollContext.Provider value={ctx}>
+      <View style={styles.root}>
+        <Animated.ScrollView
+          ref={scrollRef}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+          scrollEnabled={entered}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ backgroundColor: colors.bg }}
+          style={styles.scroll}>
+          <Hero onNavigate={scrollToSection} onSectionLayout={onSectionLayout} />
+          <Studios onNavigate={scrollToSection} onSectionLayout={onSectionLayout} />
+          <Services onNavigate={scrollToSection} onSectionLayout={onSectionLayout} />
+          <Productions onSectionLayout={onSectionLayout} />
+          <Contact onSectionLayout={onSectionLayout} />
+          <Location onSectionLayout={onSectionLayout} />
+          <Footer onNavigate={scrollToSection} />
+        </Animated.ScrollView>
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
+        <Nav visible={entered} onNavigate={scrollToSection} />
 
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+        {showIntro ? <Intro assetsReady={assetsReady} onStart={handleStart} onDone={() => setShowIntro(false)} /> : null}
+        <Scanlines />
+        <CustomCursor />
+      </View>
+    </ScrollContext.Provider>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
+  root: { flex: 1, backgroundColor: colors.bg },
+  scroll: { flex: 1 },
 });

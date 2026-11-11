@@ -1,65 +1,42 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://unistyl.es/), etc.
- */
-
-import '@/global.css';
-
-import { Platform } from 'react-native';
-
-export const Colors = {
-  light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
-  },
-  dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
-  },
+export const colors = {
+  bg: '#050707',
+  bgSoft: '#0c0f0f',
+  surface: '#111414',
+  line: 'rgba(255,255,255,0.14)',
+  lineStrong: 'rgba(255,255,255,0.4)',
+  text: '#F2F2F0',
+  textDim: 'rgba(242,242,240,0.62)',
+  textFaint: 'rgba(242,242,240,0.36)',
+  red: '#FF2A2A',
+  redDeep: '#B3001B',
+  cyan: '#2EF2FF',
+  yellow: '#FFD60A',
 } as const;
 
-export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
-
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
-  },
-});
-
-export const Spacing = {
-  half: 2,
-  one: 4,
-  two: 8,
-  three: 16,
-  four: 24,
-  five: 32,
-  six: 64,
+export const fonts = {
+  display: 'PixelifySans_400Regular',
+  displayBold: 'PixelifySans_700Bold',
+  mono: 'DMMono_400Regular',
+  monoMedium: 'DMMono_500Medium',
 } as const;
 
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
-export const MaxContentWidth = 800;
+export const layout = {
+  maxWidth: 1180,
+  navHeight: 64,
+} as const;
+
+export const images = {
+  logo: require('../../assets/opio/logo-white.png'),
+  logoTexture: require('../../assets/opio/logo-textura.webp'),
+  fundo02: require('../../assets/opio/fundo-02.webp'),
+  fundo03: require('../../assets/opio/fundo-03.webp'),
+  servicos: require('../../assets/opio/servicos-bg.webp'),
+  producoes: require('../../assets/opio/producoes.webp'),
+  contato: require('../../assets/opio/contato-bg.webp'),
+  mapa: require('../../assets/opio/mapa.webp'),
+  scanline: require('../../assets/opio/scanline.png'),
+} as const;
+
+
+export const fillAbs = { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 } as const;
+

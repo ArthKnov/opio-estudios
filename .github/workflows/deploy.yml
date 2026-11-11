@@ -1,0 +1,52 @@
+name: Deploy (GitHub Pages)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Build web
+        run: npm run build:web
+        env:
+          # Subpasta do GitHub Pages (https://<usuario>.github.io/<repo>/).
+          # Com dominio proprio, remova esta linha ou defina como "" na variavel do repo.
+          EXPO_BASE_URL: ${{ vars.EXPO_BASE_URL != '' && vars.EXPO_BASE_URL || format('/{0}', github.event.repository.name) }}
+          # URL do Web App do Apps Script (Settings > Secrets and variables > Actions > Variables)
+          EXPO_PUBLIC_SCHEDULE_ENDPOINT: ${{ vars.EXPO_PUBLIC_SCHEDULE_ENDPOINT }}
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,56 +1,76 @@
-# Welcome to your Expo app 👋
+# ØPIO ESTÚDIOS: site
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Site de divulgação do estúdio **ØPIO ESTÚDIOS** feito com **Expo** (React Native + expo-router).
+Funciona na web (mobile first, responsivo no desktop) e no celular via **Expo Go**.
 
-## Get started
+- Intro animada com "clique para entrar", scanlines, glitch, halftone parallax
+- Estúdios (Sala A e B, com fotos e vídeos do Instagram), serviços, produção FECIT (Spotify), contato e localização
+- **Agendamento de visita** com Google Meet (backend em Google Apps Script, veja [`apps-script/`](./apps-script/README.md))
 
-1. Install dependencies
+## Requisitos
 
-   ```bash
-   npm install
-   ```
+- **Node.js 22.13 ou mais novo** (recomendado 24 LTS)
 
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Rodar localmente
 
 ```bash
-npm run reset-project
+npm install
+cp .env.example .env.local    # (Windows: copy .env.example .env.local)
+npm run web                   # abre em http://localhost:8081
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+Adicione `?skip` na URL (`http://localhost:8081/?skip`) para pular a intro durante o desenvolvimento.
 
-### Other setup steps
+### No celular (Expo Go)
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+```bash
+npm start
+```
 
-## Learn more
+Escaneie o QR code com o app **Expo Go** (celular e PC na mesma rede Wi-Fi).
+Se a rede bloquear, use `npx expo start --tunnel`.
 
-To learn more about developing your project with Expo, look at the following resources:
+## Agendamento (Google Meet)
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+1. Siga [`apps-script/README.md`](./apps-script/README.md) (5 minutos) e copie a URL do Web App.
+2. Coloque em `.env.local`: `EXPO_PUBLIC_SCHEDULE_ENDPOINT=https://script.google.com/macros/s/.../exec`
+   (use `mock` para simular sem o backend).
+3. O **e-mail que recebe os agendamentos** é a propriedade `OWNER_EMAIL` do Apps Script. Ele não fica no código do site.
 
-## Join the community
+Dias/horários disponíveis: `src/constants/schedule.ts` (mantenha igual ao `CONFIG` do `Code.gs`).
 
-Join our community of developers creating universal apps.
+## Publicar no GitHub Pages
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+O workflow [`.github/workflows/deploy.yml`](./.github/workflows/deploy.yml) publica a cada push na branch `main`.
+
+1. No repositório: **Settings > Pages > Source: GitHub Actions**.
+2. **Settings > Secrets and variables > Actions > Variables**: crie `EXPO_PUBLIC_SCHEDULE_ENDPOINT` com a URL do Apps Script.
+3. Faça push. O site fica em `https://<usuario>.github.io/opio-estudios/`.
+
+Build manual: `EXPO_BASE_URL=/opio-estudios npm run build:web` (gera `dist/`).
+Com domínio próprio, defina a variável do repositório `EXPO_BASE_URL` como `/`.
+
+## Scripts
+
+| Comando             | O que faz                                   |
+| ------------------- | ------------------------------------------- |
+| `npm run web`       | servidor de desenvolvimento (web)           |
+| `npm start`         | Expo Go (QR code)                           |
+| `npm run typecheck` | checagem de tipos                           |
+| `npm run lint`      | ESLint                                      |
+| `npm run build:web` | build estático para hospedagem (`dist/`)    |
+
+## Estrutura
+
+```
+src/app/            rotas (index = página única) e _layout
+src/components/     Intro, Nav, sections/, fx/ (efeitos), schedule/, ui/
+src/constants/      theme (cores, fontes), content (textos), schedule (regras)
+assets/opio/        logos, fundos halftone, fotos/vídeos dos estúdios
+apps-script/        backend do agendamento (Google Apps Script)
+```
+
+## Identidade visual
+
+Cores: preto `#050707`, branco `#F2F2F0`, vermelho `#FF2A2A`, ciano `#2EF2FF`, amarelo `#FFD60A`.
+Fontes: **Pixelify Sans** (títulos) e **DM Mono** (texto), substitutas gratuitas da CoFo Sans Pixel do ID visual.
