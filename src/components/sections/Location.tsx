@@ -29,26 +29,29 @@ export function Location({ onSectionLayout }: Props) {
   const [box, setBox] = useState({ w: 0, h: 0 });
   const onLayout = (e: LayoutChangeEvent) => setBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height });
 
-  // Posicao do pin considerando o "cover" centralizado da imagem dentro do cartao.
+  // Posicao do pin considerando o "cover" centralizado da imagem dentro da area do mapa.
+  const mapH = isMobile ? 380 : 520;
   const artH = box.w * ART_RATIO;
   const pinX = box.w * PIN.x;
-  const pinY = artH * PIN.y - (artH - box.h) / 2;
+  const pinY = artH * PIN.y - (artH - mapH) / 2;
   const salaB = studios[1];
 
   return (
     <Section id="localizacao" onSectionLayout={onSectionLayout}>
       <SectionTitle kicker="LOCALIZAÇÃO" title="Onde estamos" />
       <Reveal>
-        <View onLayout={onLayout} style={[styles.card, { height: isMobile ? 560 : 520 }]}>
-          <Image source={images.mapa} contentFit="cover" style={StyleSheet.absoluteFill} />
-          <LinearGradient
-            pointerEvents="none"
-            colors={isMobile ? ['rgba(5,7,7,0)', 'rgba(5,7,7,0.2)', 'rgba(5,7,7,0.95)'] : ['rgba(5,7,7,0.92)', 'rgba(5,7,7,0.5)', 'rgba(5,7,7,0)']}
-            start={isMobile ? { x: 0.5, y: 0.25 } : { x: 0, y: 0.5 }}
-            end={isMobile ? { x: 0.5, y: 1 } : { x: 0.75, y: 0.5 }}
-            style={StyleSheet.absoluteFill}
-          />
-          {box.w > 0 ? <PinPulse x={pinX} y={pinY} /> : null}
+        <View onLayout={onLayout} style={[styles.card, !isMobile && { height: mapH }]}>
+          <View style={isMobile ? { height: mapH } : StyleSheet.absoluteFill}>
+            <Image source={images.mapa} contentFit="cover" style={StyleSheet.absoluteFill} />
+            <LinearGradient
+              pointerEvents="none"
+              colors={isMobile ? ['rgba(5,7,7,0)', 'rgba(5,7,7,0)', 'rgba(5,7,7,0.9)'] : ['rgba(5,7,7,0.92)', 'rgba(5,7,7,0.5)', 'rgba(5,7,7,0)']}
+              start={isMobile ? { x: 0.5, y: 0.5 } : { x: 0, y: 0.5 }}
+              end={isMobile ? { x: 0.5, y: 1 } : { x: 0.75, y: 0.5 }}
+              style={StyleSheet.absoluteFill}
+            />
+            {box.w > 0 ? <PinPulse x={pinX} y={pinY} /> : null}
+          </View>
 
           <View style={[styles.panel, isMobile ? styles.panelMobile : styles.panelDesktop]}>
             <Text style={styles.kicker}>SALA A · SEDE</Text>
@@ -96,9 +99,9 @@ function PinPulse({ x, y }: { x: number; y: number }) {
 
 const styles = StyleSheet.create({
   card: { width: '100%', borderWidth: 1, borderColor: colors.lineStrong, backgroundColor: colors.surface, overflow: 'hidden' },
-  panel: { position: 'absolute', gap: 4 },
-  panelDesktop: { left: 44, top: 44, bottom: 44, justifyContent: 'center', maxWidth: 440 },
-  panelMobile: { left: 22, right: 22, bottom: 24 },
+  panel: { gap: 4 },
+  panelDesktop: { position: 'absolute', left: 44, top: 44, bottom: 44, justifyContent: 'center', maxWidth: 440 },
+  panelMobile: { paddingHorizontal: 22, paddingTop: 4, paddingBottom: 28 },
   kicker: { fontFamily: fonts.mono, fontSize: 12, color: colors.yellow, letterSpacing: 3 },
   address: { fontFamily: fonts.display, color: colors.text, lineHeight: 38, marginTop: 6 },
   addressSmall: { fontFamily: fonts.display, color: colors.text, fontSize: 20, marginTop: 6 },
