@@ -34,8 +34,10 @@ export function Productions({ onSectionLayout }: Props) {
       <Reveal delay={200}>
         <Text style={styles.text}>{production.text}</Text>
       </Reveal>
-      <Reveal delay={280} style={{ marginTop: 28 }}>
-        <SpotifyEmbed trackId={production.spotifyTrackId} height={232} />
+      <Reveal delay={280} style={isMobile ? styles.playerMobile : styles.player}>
+        {/* No celular o formato alto do Spotify coloca o nome da faixa abaixo da capa,
+            em vez de espremê-lo ao lado dela. */}
+        <SpotifyEmbed trackId={production.spotifyTrackId} height={isMobile ? 352 : 152} />
       </Reveal>
       <Reveal delay={340} style={{ marginTop: 22 }}>
         <PixelButton label="Ouvir no Spotify" variant="red" href={production.spotifyUrl} />
@@ -74,6 +76,8 @@ const styles = StyleSheet.create({
   art: { width: '100%', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, overflow: 'hidden', alignSelf: 'center' },
   artImage: { width: '100%', aspectRatio: 4 / 3 },
   artBody: { paddingHorizontal: 20, paddingTop: 22, paddingBottom: 26 },
+  player: { marginTop: 28 },
+  playerMobile: { marginTop: 24, marginHorizontal: -20 },
   tag: { position: 'absolute', top: 18, left: 18, backgroundColor: colors.red, paddingVertical: 4, paddingHorizontal: 8 },
   tagText: { fontFamily: fonts.mono, fontSize: 11, letterSpacing: 2, color: colors.bg },
   kicker: { fontFamily: fonts.mono, fontSize: 14, color: colors.red, letterSpacing: 3, marginBottom: 10 },

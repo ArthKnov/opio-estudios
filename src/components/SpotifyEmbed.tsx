@@ -27,7 +27,7 @@ export function SpotifyEmbed({ trackId, height = 152 }: { trackId: string; heigh
 }
 
 const styles = StyleSheet.create({
-  wrap: { width: '100%', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, overflow: 'hidden' },
+  wrap: { width: '100%', backgroundColor: colors.surface, overflow: 'hidden', borderRadius: 12 },
   web: { flex: 1, backgroundColor: 'transparent' },
   loading: { ...fillAbs, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
 });
