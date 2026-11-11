@@ -49,41 +49,21 @@ export function Intro({ assetsReady, onStart, onDone }: Props) {
     assetsReadyRef.current = assetsReady;
   }, [assetsReady]);
 
-  // Animacao guiada por quadros (nao pelo relogio): se a pagina engasgar ao carregar
-  // arquivos, o progresso nao "pula", so continua do ponto onde estava.
-  // Fase 1: sobe suavemente ate 94%. Fase 2: completa quando os assets estiverem prontos.
+  // Um unico trecho, velocidade constante do 0 ao 100. O "entrar" so libera
+  // quando a animacao termina e os arquivos ja carregaram.
   useEffect(() => {
-    const T1 = reduced ? 400 : 1400;
-    const T2 = reduced ? 150 : 600;
-    const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
-    // Começa rápido e só desacelera no fim (não zera a velocidade na troca de fase).
-    const easeOut = (t: number) => 1 - Math.pow(1 - t, 2);
+    const total = reduced ? 500 : 1600;
     let raf = 0;
     let last = 0;
     let elapsed = 0;
-    let finishAt = -1;
-    let finishFrom = 0;
 
     const tick = (now: number) => {
       const dt = last ? Math.min(now - last, 34) : 16;
       last = now;
       elapsed += dt;
-
-      let p: number;
-      if (finishAt < 0) {
-        p = easeInOut(Math.min(elapsed / T1, 1)) * 0.94;
-        // A fase 2 comeca antes do fim da fase 1 (sem "parada" em 94%).
-        if (assetsReadyRef.current && elapsed >= T1 * 0.8) {
-          finishAt = elapsed;
-          finishFrom = p;
-        }
-      } else {
-        p = finishFrom + (1 - finishFrom) * easeOut(Math.min((elapsed - finishAt) / T2, 1));
-      }
+      const p = Math.min(elapsed / total, 1);
       progress.value = p;
-
-      if (finishAt >= 0 && elapsed - finishAt >= T2) {
-        progress.value = 1;
+      if (p >= 1 && assetsReadyRef.current) {
         setReady(true);
         return;
       }
