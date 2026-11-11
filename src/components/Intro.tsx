@@ -50,7 +50,7 @@ export function Intro({ assetsReady, onStart, onDone }: Props) {
       const cur = pctRef.current;
       if (cur >= 100) return;
       const cap = readyRef.current ? 100 : 94;
-      let next = cur + (Math.random() < 0.18 ? 0 : 0.8 + Math.random() * 3.2);
+      let next = cur + (Math.random() < 0.1 ? 0 : 2 + Math.random() * 5);
       next = Math.min(cap, next);
       pctRef.current = next;
       setPct(next);
@@ -58,7 +58,7 @@ export function Intro({ assetsReady, onStart, onDone }: Props) {
         const r = (Math.random() * 2 - 1) * size * 0.04;
         jitter.value = withSequence(withTiming(r, { duration: 40 }), withTiming(0, { duration: 90 }));
       }
-    }, 55);
+    }, 45);
     return () => clearInterval(id);
   }, [reduced, size, jitter]);
 
