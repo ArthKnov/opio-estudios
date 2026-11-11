@@ -4,13 +4,16 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
+  useAnimatedReaction,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
   withRepeat,
   withSequence,
   withTiming,
+  type SharedValue,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import { fillAbs, colors, fonts, images } from '@/constants/theme';
 import { useLayout } from '@/hooks/use-layout';
@@ -32,37 +35,73 @@ export function Intro({ assetsReady, onStart, onDone }: Props) {
   const { width, height, isMobile } = useLayout();
   const size = Math.round(Math.min(width * 0.64, height * 0.4, 360));
 
-  const [pct, setPct] = useState(0);
   const [entering, setEntering] = useState(false);
-  const pctRef = useRef(0);
-  const readyRef = useRef(assetsReady);
-  useEffect(() => {
-    readyRef.current = assetsReady;
-  }, [assetsReady]);
+  const [ready, setReady] = useState(false);
 
+  // Progresso 0..1 (valor compartilhado: so o contador re-renderiza, e apenas a cada 1%).
+  const progress = useSharedValue(0);
   const jitter = useSharedValue(0);
   const blink = useSharedValue(1);
   const exit = useSharedValue(0);
 
-  // Progresso "irregular" (parece carregamento real) e so chega a 100 quando os assets estiverem prontos.
+  const assetsReadyRef = useRef(assetsReady);
   useEffect(() => {
+    assetsReadyRef.current = assetsReady;
+  }, [assetsReady]);
+
+  // Animacao guiada por quadros (nao pelo relogio): se a pagina engasgar ao carregar
+  // arquivos, o progresso nao "pula", so continua do ponto onde estava.
+  // Fase 1: sobe suavemente ate 94%. Fase 2: completa quando os assets estiverem prontos.
+  useEffect(() => {
+    const T1 = reduced ? 400 : 1400;
+    const T2 = reduced ? 150 : 600;
+    const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+    let raf = 0;
+    let last = 0;
+    let elapsed = 0;
+    let finishAt = -1;
+    let finishFrom = 0;
+
+    const tick = (now: number) => {
+      const dt = last ? Math.min(now - last, 34) : 16;
+      last = now;
+      elapsed += dt;
+
+      let p: number;
+      if (finishAt < 0) {
+        p = easeInOut(Math.min(elapsed / T1, 1)) * 0.94;
+        // A fase 2 comeca antes do fim da fase 1 (sem "parada" em 94%).
+        if (assetsReadyRef.current && elapsed >= T1 * 0.8) {
+          finishAt = elapsed;
+          finishFrom = p;
+        }
+      } else {
+        p = finishFrom + (1 - finishFrom) * easeInOut(Math.min((elapsed - finishAt) / T2, 1));
+      }
+      progress.value = p;
+
+      if (finishAt >= 0 && elapsed - finishAt >= T2) {
+        progress.value = 1;
+        setReady(true);
+        return;
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [reduced, progress]);
+
+  // Pequenos "glitches" laterais enquanto carrega.
+  useEffect(() => {
+    if (reduced || ready) return;
     const id = setInterval(() => {
-      const cur = pctRef.current;
-      if (cur >= 100) return;
-      const cap = readyRef.current ? 100 : 94;
-      let next = cur + (Math.random() < 0.1 ? 0 : 2 + Math.random() * 5);
-      next = Math.min(cap, next);
-      pctRef.current = next;
-      setPct(next);
-      if (!reduced && Math.random() < 0.22) {
+      if (Math.random() < 0.28) {
         const r = (Math.random() * 2 - 1) * size * 0.04;
         jitter.value = withSequence(withTiming(r, { duration: 40 }), withTiming(0, { duration: 90 }));
       }
-    }, 45);
+    }, 110);
     return () => clearInterval(id);
-  }, [reduced, size, jitter]);
-
-  const ready = pct >= 100;
+  }, [reduced, ready, size, jitter]);
 
   useEffect(() => {
     if (!ready || reduced) return;
@@ -94,7 +133,10 @@ export function Intro({ assetsReady, onStart, onDone }: Props) {
     return () => window.removeEventListener('keydown', onKey);
   }, [enter]);
 
-  const frac = Math.min(1, pct / 100);
+  const scanStyle = useAnimatedStyle(() => ({
+    top: size * progress.value,
+    opacity: progress.value >= 1 ? 0 : 1,
+  }));
 
   const logoStyle = useAnimatedStyle(() => {
     const e = exit.value;
@@ -117,8 +159,6 @@ export function Intro({ assetsReady, onStart, onDone }: Props) {
   const jitterNeg = useAnimatedStyle(() => ({ transform: [{ translateX: -jitter.value }] }));
   const blinkStyle = useAnimatedStyle(() => ({ opacity: blink.value }));
 
-  const litBlocks = Math.floor(frac * BLOCKS);
-
   return (
     <Animated.View style={[styles.root, rootStyle]} pointerEvents={entering ? 'none' : 'auto'}>
       <Pressable
@@ -139,28 +179,21 @@ export function Intro({ assetsReady, onStart, onDone }: Props) {
           <Image source={images.logo} contentFit="contain" style={[StyleSheet.absoluteFill, { opacity: 0.07 }]} />
           {/* camadas RGB durante o scan */}
           <Animated.View style={[StyleSheet.absoluteFill, jitterStyle]}>
-            <RevealedLogo size={size} frac={frac} tint={colors.red} opacity={0.75} />
+            <RevealedLogo size={size} progress={progress} tint={colors.red} opacity={0.75} />
           </Animated.View>
           <Animated.View style={[StyleSheet.absoluteFill, jitterNeg]}>
-            <RevealedLogo size={size} frac={frac} tint={colors.cyan} opacity={0.6} />
+            <RevealedLogo size={size} progress={progress} tint={colors.cyan} opacity={0.6} />
           </Animated.View>
-          <RevealedLogo size={size} frac={frac} />
+          <RevealedLogo size={size} progress={progress} />
           {/* linha de scan */}
-          {!ready ? (
-            <View
-              pointerEvents="none"
-              style={[styles.scan, { top: size * frac, boxShadow: `0 0 14px 2px ${colors.red}` } as object]}
-            />
-          ) : null}
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.scan, { boxShadow: `0 0 14px 2px ${colors.red}` } as object, scanStyle]}
+          />
         </Animated.View>
 
         <Animated.View style={[styles.bottom, uiStyle]}>
-          <Text style={styles.counter}>{`${String(Math.floor(pct)).padStart(3, '0')}%`}</Text>
-          <View style={styles.blocks}>
-            {Array.from({ length: BLOCKS }).map((_, i) => (
-              <View key={i} style={[styles.block, i < litBlocks && styles.blockOn]} />
-            ))}
-          </View>
+          <ProgressReadout progress={progress} />
           <View style={styles.cta}>
             {ready ? (
               <Animated.View style={blinkStyle}>
@@ -178,11 +211,44 @@ export function Intro({ assetsReady, onStart, onDone }: Props) {
   );
 }
 
-function RevealedLogo({ size, frac, tint, opacity = 1 }: { size: number; frac: number; tint?: string; opacity?: number }) {
+/** Contador + blocos. So esta parte re-renderiza quando o numero inteiro muda. */
+function ProgressReadout({ progress }: { progress: SharedValue<number> }) {
+  const [n, setN] = useState(0);
+  useAnimatedReaction(
+    () => Math.min(100, Math.floor(progress.value * 100)),
+    (cur, prev) => {
+      if (cur !== prev) scheduleOnRN(setN, cur);
+    },
+  );
+  const lit = Math.round((n / 100) * BLOCKS);
   return (
-    <View style={{ position: 'absolute', top: 0, left: 0, width: size, height: size * frac, overflow: 'hidden', opacity }}>
+    <>
+      <Text style={styles.counter}>{`${String(n).padStart(3, '0')}%`}</Text>
+      <View style={styles.blocks}>
+        {Array.from({ length: BLOCKS }).map((_, i) => (
+          <View key={i} style={[styles.block, i < lit && styles.blockOn]} />
+        ))}
+      </View>
+    </>
+  );
+}
+
+function RevealedLogo({
+  size,
+  progress,
+  tint,
+  opacity = 1,
+}: {
+  size: number;
+  progress: SharedValue<number>;
+  tint?: string;
+  opacity?: number;
+}) {
+  const style = useAnimatedStyle(() => ({ height: size * progress.value }));
+  return (
+    <Animated.View style={[{ position: 'absolute', top: 0, left: 0, width: size, overflow: 'hidden', opacity }, style]}>
       <Image source={images.logo} contentFit="contain" tintColor={tint} style={{ width: size, height: size }} />
-    </View>
+    </Animated.View>
   );
 }
 
